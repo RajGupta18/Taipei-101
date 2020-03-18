@@ -2,8 +2,13 @@
 
 public class SwayRadial : MonoBehaviour
 {
-    public float m_swayFrequency;
-    public float m_swayAmplitude;
+    public float m_swayFrequency_x = 0f;
+    public float m_swayFrequency_z = 0f;
+
+    public float m_swayAmplitude_x = 0f;
+    public float m_swayAmplitude_z = 0f;
+
+    public float m_thresholdAmplitude;
 
     //public GameObject m_referenceObj;
 
@@ -35,13 +40,15 @@ public class SwayRadial : MonoBehaviour
     void Update() {
         swaytime += Time.deltaTime;
 
-        float omega = 2*m_swayFrequency*Mathf.PI;
+        float omega_x = 2*m_swayFrequency_x*Mathf.PI;
+        float omega_z = 2*m_swayFrequency_z*Mathf.PI;
 
-        SwayMovement(omega*swaytime);
+        SwayMovement(omega_x*swaytime, omega_z*swaytime);
     }
 
-    void SwayMovement(float swayPhase) {
-        float theta = Mathf.Deg2Rad*m_swayAmplitude * Mathf.Sin(swayPhase);     //angular sway equation in radian
+    void SwayMovement(float swayPhase_x, float swayPhase_y) {
+        float theta_x = (m_swayAmplitude_x < m_thresholdAmplitude)? 0f : Mathf.Deg2Rad*(m_swayAmplitude_x - m_thresholdAmplitude)* Mathf.Sin(swayPhase_x);     //angular sway equation in radian
+        float theta_z = (m_swayAmplitude_z < m_thresholdAmplitude)? 0f : Mathf.Deg2Rad*(m_swayAmplitude_z - m_thresholdAmplitude)* Mathf.Sin(swayPhase_y);
 
         Vector3[] vert = mesh.vertices;
         for(int i =0; i < originalVert.Length; i++) {
@@ -49,7 +56,11 @@ public class SwayRadial : MonoBehaviour
             float radius = transform.TransformPoint(originalVert[i]).y;
             float swayHeightFactor = (radius - r_min) / (r_max - r_min);    //scale eefect of angular sway w.r.t height from reference plane
 
-            vert[i] = transform.InverseTransformPoint(new Vector3(radius*Mathf.Sin(swayHeightFactor*theta) + originalWorldPos.x, radius *Mathf.Cos(theta*swayHeightFactor), originalWorldPos.z));
+            float netAmplitude_y = Mathf.Cos(swayHeightFactor*Mathf.Sqrt(theta_x*theta_x + theta_z*theta_z));
+
+            vert[i] = transform.InverseTransformPoint(new Vector3(radius*Mathf.Sin(swayHeightFactor*theta_x) + originalWorldPos.x,
+                                                                    radius*netAmplitude_y,
+                                                                    radius*Mathf.Sin(swayHeightFactor*theta_z)+originalWorldPos.z));
         }
 
         mesh.vertices = vert;
